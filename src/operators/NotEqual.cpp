@@ -21,21 +21,27 @@
 // https://github.com/ai-techsystems/dnnCompiler
 //
 
-#include "core/tensor.h"
-#include <fstream>
+#include "operators/NotEqual.h"
+
+using namespace dnnc;
+using namespace Eigen;
+
+#ifdef DNNC_NOTEQUAL_TEST
 #include <iostream>
+int main() {
+  float d1[6] = {1., 2., 3., 4., 5., 6.};
+  float d2[6] = {1., 2., 3., 6., 5., 6.};
+  tensor<float> a(2, 3);
+  a.load(d1);
+  tensor<float> b(2, 3);
+  b.load(d2);
 
-int main(int argc, char *argv[]) {
-  // Verify that the version of the library that we linked against is
-  // compatible with the version of the headers we compiled against.
+  NotEqual<float> m("localOpName");
+  auto result = m.compute(a, b);
 
-  if (argc != 2) {
-    std::cerr << "Usage:  " << argv[0] << " onnx_model_file"
-              << "\n";
-    return -1;
-  }
-  std::cout << "DNNC is under development. Check back in Sep 2019 for full "
-               "release.\n";
+  std::cout << result;
+  std::cout << "\n";
 
   return 0;
 }
+#endif

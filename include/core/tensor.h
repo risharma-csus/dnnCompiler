@@ -37,17 +37,15 @@
 #include <random>
 
 namespace dnnc {
-typedef size_t INDEX;
-typedef size_t DIMENSION;
-enum INIT_TYPE { INIT_NONE = 0, INIT_RANDOM, INIT_ZERO, INIT_ONE };
+enum INIT_TYPE { INIT_NONE = 0, INIT_RANDOM, INIT_ZERO, INIT_ONE, INIT_VALUE };
 
-template <typename T> class baseOperator;
+template <class To, class Ti1, class Ti2> class baseOperator;
 template <typename T> class tensor;
 template <typename T> static tensor<T> NULL_TENSOR;
 
 // Tensor with arbitrary rank.
 template <typename T> class tensor {
-  friend class baseOperator<T>;
+  template <class To, class Ti1, class Ti2> friend class baseOperator;
 
 protected:
   //////////// protected members /////////////////
@@ -75,7 +73,7 @@ protected:
 
   /// \brief only constructors call init method. Argument type
   /// INIT_TYPE initializes _mem_layout to 0, 1, random or uninitialized.
-  void init(INIT_TYPE fill = INIT_NONE) {
+  void init(INIT_TYPE fill = INIT_NONE, T val = 0) {
 
     init_ref();
 
@@ -99,6 +97,9 @@ protected:
     } else if (fill == INIT_ONE) {
       for (size_t i = 0; i < msize; i++)
         _mem_layout[i] = static_cast<T>(1);
+    } else if (fill == INIT_VALUE) {
+      for (size_t i = 0; i < msize; i++)
+        _mem_layout[i] = val;
     }
   }
 
@@ -108,14 +109,14 @@ public:
   /// CTOR 1: Use this contructor with shape vector and to initialize
   ///         with zero, one, or random numbers.
   tensor(std::vector<DIMENSION> dimn, std::string n = "",
-         INIT_TYPE fill = INIT_NONE)
+         INIT_TYPE fill = INIT_NONE, T init_val = 0)
       : _ref(0x0), _mem_layout(0x0), _name(n), _shape(dimn) {
-    init(fill);
+    init(fill, init_val);
   }
   /// CTOR 1a: Use this contructor with upto 4 dimensions to initialize with
   ///          zero, one, or random numbers.
   tensor(DIMENSION x = 0, DIMENSION y = 0, DIMENSION z = 0, DIMENSION w = 0,
-         std::string n = "", INIT_TYPE fill = INIT_NONE)
+         std::string n = "", INIT_TYPE fill = INIT_NONE, T init_val = 0)
       : _ref(0x0), _mem_layout(0x0), _name(n) {
     if (x) {
       _shape.push_back(x);
@@ -126,7 +127,7 @@ public:
       if (w)
         _shape.push_back(w);
     }
-    init(fill);
+    init(fill, init_val);
   }
   /// USE WITH CAUTION.
   /// CTOR 2: Use this contructor to handover the externally allocated and
@@ -158,6 +159,19 @@ public:
     (*_ref)++;
 
     return *this;
+  }
+  /// \brief Comparison Operator
+  bool operator==(const tensor &other) {
+    if (_mem_layout == other._mem_layout) {
+      return _shape == other._shape ? true : false;
+    }
+    if (_shape != other._shape)
+      return false;
+    for (size_t i = 0; i < length(); i++) {
+      if (!(_mem_layout[i] == other._mem_layout[i]))
+        return false;
+    }
+    return true;
   }
   ~tensor() {
     if (_ref)
@@ -199,7 +213,6 @@ public:
     return result;
   }
   /// \brief identifier of the tensor
-  /// \brief identifier of the tensor
   size_t identifier() const {
     return reinterpret_cast<size_t>(_mem_layout - 0xfff);
   }
@@ -225,8 +238,12 @@ public:
   tensor<float> asTypeFloat() { return asType<float>(); }
   /// \brief return a copy of the tensor, cast to int
   tensor<int> asTypeInt() { return asType<int>(); }
+  /// \brief return a copy of the tensor, cast to uint8
+  tensor<uint8_t> asTypeUint8() { return asType<uint8_t>(); }
   /// \brief return a copy of the tensor, cast to long
   tensor<long> asTypeLong() { return asType<long>(); }
+  /// \brief return a copy of the tensor, cast to unsigned long
+  tensor<size_t> asTypeULong() { return asType<size_t>(); }
   /// \brief return a copy of the tensor, cast to bool
   tensor<bool> asTypeBool() { return asType<bool>(); }
 
@@ -347,6 +364,7 @@ public:
       sz = sz * _shape[i];
     return sz;
   }
+  void name(std::string n) { _name = n; }
   std::string name() const { return _name; }
   const DIMENSION rank() const { return _shape.size(); }
   const std::vector<DIMENSION> shape() const { return _shape; }
@@ -404,7 +422,12 @@ public:
 
   T &operator()(std::vector<INDEX> &indices) const {
     INDEX index = 0;
-    if (rank() == 4 && indices.size() == 4) {
+    if (rank() == 5 && indices.size() == 5) {
+      index = indices[0] * _shape[1] * _shape[2] * _shape[3] * _shape[4] +
+              indices[1] * _shape[2] * _shape[3] * _shape[4] +
+              indices[2] * _shape[3] * _shape[4] + indices[3] * _shape[4] +
+              indices[4];
+    } else if (rank() == 4 && indices.size() == 4) {
       index = indices[0] * _shape[1] * _shape[2] * _shape[3] +
               indices[1] * _shape[2] * _shape[3] + indices[2] * _shape[3] +
               indices[3];
@@ -434,7 +457,7 @@ public:
   }
 
   T &operator()(const INDEX x = 0, const INDEX y = 0, const INDEX z = 0,
-                const INDEX w = 0) const {
+                const INDEX w = 0, const INDEX u = 0) const {
     std::vector<INDEX> indices;
     indices.push_back(x);
     if (rank() > 1)
@@ -443,7 +466,8 @@ public:
       indices.push_back(z);
     if (rank() > 3)
       indices.push_back(w);
-
+    if (rank() > 4)
+      indices.push_back(u);
     return this->operator()(indices);
   }
   std::string dtype() { return dtype_str[typeid(T).name()[0] - 'a']; }
@@ -455,4 +479,11 @@ public:
   }
 
 }; // class tensor
+
+template <typename T> struct tensorCmp {
+  bool operator()(const tensor<T> &lhs, const tensor<T> &rhs) {
+    return lhs.identifier() < rhs.identifier();
+  }
+};
+
 } // namespace dnnc

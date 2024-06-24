@@ -28,16 +28,27 @@
 using namespace Eigen;
 
 namespace dnnc {
-template <typename T> class Neg : public baseOperator<T> {
+template <typename T> class Neg : public baseOperator<T, T, T> {
   //  Neg attributes
 public:
-  Neg(std::string name = "opNeg") : baseOperator<T>(opNeg, name) {}
+  Neg(std::string name = "opNeg") : baseOperator<T, T, T>(opNeg, name) {}
 
   // bool getAttribute<int>(OPATTR attrName, int& obj) ;
 
-  void compute(void) {
-    // CHANGE return-type and args
-    // AND ADD YOUR FUNCTIONAL CODE HERE
+  tensor<T> compute(tensor<T> &a /*!< ND tensor*/) {
+
+    if ((this->template type_check<bool>(typeid(T))))
+      throw std::invalid_argument(
+          "Constrain input and output types to numeric tensors.");
+
+    tensor<T> result(a.shape(), a.name());
+
+    DNNC_EIGEN_ARRAY_MAP(eigenVector, T, a);
+    DNNC_EIGEN_VECTOR_CTOR(T) eResult;
+    eResult.array() = -eigenVector.array();
+    result.load(eResult.data());
+
+    return result;
   }
 };
 } // namespace dnnc

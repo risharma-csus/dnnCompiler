@@ -24,20 +24,28 @@
 
 #include "core/tensor.h"
 #include "operators/Add.h"
+#include "operators/Abs.h"
+#include "operators/And.h"
+#include "operators/Conv.h"
+#include "operators/BitShift.h"
 #include "operators/DequantizeLinear.h"
 #include "operators/Div.h"
+#include "operators/Dropout.h"
 #include "operators/Elu.h"
 #include "operators/Equal.h"
 #include "operators/Erf.h"
 #include "operators/Exp.h"
+#include "operators/Expand.h"
 #include "operators/EyeLike.h"
 #include "operators/Flatten.h"
 #include "operators/Floor.h"
+#include "operators/FloorDiv.h"
 #include "operators/Gemm.h"
 #include "operators/GlobalAveragePool.h"
 #include "operators/GlobalLpPool.h"
 #include "operators/GlobalMaxPool.h"
 #include "operators/Greater.h"
+#include "operators/GreaterEqual.h"
 #include "operators/HardSigmoid.h"
 #include "operators/Hardmax.h"
 #include "operators/Identity.h"
@@ -47,6 +55,7 @@
 #include "operators/LRN.h"
 #include "operators/LeakyRelu.h"
 #include "operators/Less.h"
+#include "operators/LessEqual.h"
 #include "operators/Log.h"
 #include "operators/LogSoftmax.h"
 #include "operators/LpNormalization.h"
@@ -55,25 +64,173 @@
 #include "operators/Max.h"
 #include "operators/Mean.h"
 #include "operators/Min.h"
+#include "operators/Mod.h"
+#include "operators/Mul.h"
+#include "operators/Neg.h"
+#include "operators/Not.h"
+#include "operators/NotEqual.h"
+#include "operators/Or.h"
+#include "operators/Pow.h"
 #include "operators/Reciprocal.h"
+#include "operators/Remainder.h"
 #include "operators/Sub.h"
+#include "operators/Tan.h"
+#include "operators/Tanh.h"
 #include "operators/ThresholdedRelu.h"
 #include "operators/Transpose.h"
+#include "operators/TrueDiv.h"
+#include "operators/Xor.h"
+#include "operators/Sigmoid.h"
+#include "operators/Sign.h"
+#include "operators/Sin.h"
+#include "operators/Sinh.h"
+#include "operators/Softplus.h"
+#include "operators/Softmax.h"
+#include "operators/Softsign.h"
+#include "operators/Sqrt.h"
+#include "operators/Clip.h"
+#include "operators/Ceil.h"
+#include "operators/Cos.h"
+#include "operators/Cosh.h"
+#include "operators/Slice.h"
+#include "operators/PRelu.h"
 
 extern std::vector<float> listTupleToVector_Float(PyObject *);
 extern std::vector<size_t> listTupleToVector_SizeT(PyObject *);
 
-/*## (Don't remove the '##', it indicates the split line)
-The code above this commented block will be copied as it is. 
+<\/>
+
+/* (Don't remove the '<\/>', it indicates the split line)
+The code above this commented block will be copied as it is.
 Keep in mind, this file is "\n" and "whitespace" sensitive,
-so try to keep the structure similar. 
+so try to keep the structure similar.
 Do not comment out any line in between 2 operator functions.
 Every operator function is seperated by a blank line.
 So don't leave empty line anywhere else other than in between 2 operators.
 The code below will be modified according to the dtype.
 DO NOT NAME TENSOR VARIABLES AS 'INPUT' go for 'a', 'b' etc
-Note: Not all of them are modified to input output format
-I have updated my part, you should update yours too. */
+Note: Not all of them are modified to input output format */
+
+dtype_precedence_dict = {
+	"double" : 16,
+	"float" : 14,
+	"size_t" : 12,
+	"long" : 10,
+	"int" : 8,
+	"short" : 6,
+	"bool" : 4,
+	"char" : 2,
+}
+
+<\/>
+
+operator_list = {
+	"add" : ["Add", "add"],
+	"sub" : ["Sub", "sub"],
+	"mul" : ["Mul", "mul"],
+	"floor_div" : ["FloorDiv", "floordiv"],
+	"true_div" : ["TrueDiv", "div"],
+	"remainder" : ["Remainder", "mod"],
+	"power" : ["Pow", "pow"],
+}
+
+dtype = {
+		"double" : [
+					["double", "double"],
+					["double", "float"],
+					["double", "size_t"],
+					["double", "int"],
+					["double", "bool"],
+					["float", "double"],
+					["size_t", "double"],
+					["int", "double"],
+					["bool", "double"],
+				],
+		"float" : [
+					["float", "float"],
+					["float", "size_t"],
+					["float", "int"],
+					["float", "bool"],
+					["size_t", "float"],
+					["int", "float"],
+					["bool", "float"],
+				],
+		"size_t" : [
+					["size_t", "size_t"],
+					["size_t", "int"],
+					["size_t", "bool"],
+					["int", "size_t"],
+					["bool", "size_t"],
+				],
+		"int" : [
+					["int", "int"],
+					["int", "bool"],
+					["bool", "int"],
+				],
+		"bool" : [
+					["bool", "bool"],
+				],
+	}
+
+tensor<output> dc_operator(tensor<input1> &a, tensor<input2> &b) {
+	operator_header<output, input> op;
+	return op.compute(a, b);
+}
+
+<\/>
+
+operator_list = {
+	"logical" : {
+		"logical_and" : ["And", "and"],
+		"logical_or" : ["Or", "or"],
+		"logical_xor" : ["Xor", "xor"],
+	},
+	"comparison" : {
+		"equal" : ["Equal", "eq"],
+		"less" : ["Less", "lt"],
+		"greater" : ["Greater", "gt"],
+		"not_equal" : ["NotEqual", "ne"],
+		"less_equal" : ["LessEqual", "le"],
+		"greater_equal" : ["GreaterEqual", "ge"],
+	}
+}
+
+dtype = {
+		"bool" : [
+			["double", "double"],
+			["double", "float"],
+			["double", "size_t"],
+			["double", "int"],
+			["double", "bool"],
+			["float", "double"],
+			["size_t", "double"],
+			["int", "double"],
+			["bool", "double"],
+			["float", "float"],
+			["float", "size_t"],
+			["float", "int"],
+			["float", "bool"],
+			["size_t", "float"],
+			["int", "float"],
+			["bool", "float"],
+			["size_t", "size_t"],
+			["size_t", "int"],
+			["size_t", "bool"],
+			["int", "size_t"],
+			["bool", "size_t"],
+			["int", "int"],
+			["int", "bool"],
+			["bool", "int"],
+			["bool", "bool"],
+		],
+	}
+
+tensor<output> dc_operator(tensor<input1> &a, tensor<input2> &b) {
+	operator_header<output, input> op;
+	return op.compute(a, b);
+}
+
+<\/>
 
 tensor<float> array(size_t x, size_t y = 0, size_t z = 0, size_t w = 0) {
 	return tensor<float>(x, y, z, w, "", dnnc::INIT_RANDOM);
@@ -189,9 +346,9 @@ tensor<output> matmul(tensor<input> &a, tensor<input> &b) {
 	}
 }
 
-tensor<output> add(tensor<input> &a, tensor<input> &b) {
-	Add<input> op;
-	return op.compute(a, b);
+tensor<output> abs(tensor<input> &a) {
+	Abs<input> op;
+	return op.compute(a);
 	dtype = {
 		"double" : "double",
 		"float" : "float",
@@ -199,20 +356,46 @@ tensor<output> add(tensor<input> &a, tensor<input> &b) {
 	}
 }
 
-tensor<output> sub(tensor<input> &a, tensor<input> &b) {
-	Sub<input> op;
+tensor<output> bitshift(tensor<input> &a, tensor<input> &b, std::string direction = "") {
+	BitShift<input> op("localOpName", direction);
 	return op.compute(a, b);
 	dtype = {
-		"double" : "double",
+		"int" : "int",
+	}
+}
+
+tensor<output> conv(tensor<input> X, tensor<input> W, tensor<input> B,
+                    std::string auto_pad = "NOTSET",
+                    std::vector<int> dilations = std::vector<int>(),
+                    int group = 1, 
+                    std::vector<int> kernal_shape = std::vector<int>(),
+                    std::vector<int> pads = std::vector<int>(),
+                    std::vector<int> strides = std::vector<int>())
+{
+	Conv<output, input, input> op("opConv", auto_pad, dilations,
+                                     group, kernal_shape,
+                                     pads, strides);
+	return op.compute(X, W, B);
+	dtype = {
 		"float" : "float",
-		"int" : "int"
+		"double" : "double",
 	}
 }
 
 tensor<output> dequantize_linear(tensor<input> &a, tensor<float> &b, tensor<input> &c) {
-	DequantizeLinear<input> op;
+	DequantizeLinear<output, input> op;
 	return op.compute(a, b, c);
 	dtype = {
+		"int" : "float",
+		"int" : "float"
+	}
+}
+
+tensor<output> dropout(tensor<input> &a, float ratio = 0.5) {
+	Dropout<input> op("localOpName", ratio);
+	return op.compute(a);
+	dtype = {
+		"double" : "double",
 		"float" : "float"
 	}
 }
@@ -236,17 +419,6 @@ tensor<output> elu(tensor<input> &a, float alpha = 1.0) {
 	}
 }
 
-tensor<output> equal(tensor<input> &a, tensor<input> &b) {
-	Equal<input> op;
-	return op.compute(a, b);
-	dtype = {
-		"double" : "bool",
-		"float" : "bool",
-		"bool" : "bool",
-		"int" : "bool"
-	}
-}
-
 tensor<output> erf(tensor<input> &a) {
 	Erf<input> op;
 	return op.compute(a);
@@ -259,6 +431,15 @@ tensor<output> erf(tensor<input> &a) {
 tensor<output> exp(tensor<input> &a) {
 	Exp<input> op;
 	return op.compute(a);
+	dtype = {
+		"double" : "double",
+		"float" : "float"
+	}
+}
+
+tensor<output> expand(tensor<input> &a, tensor<int> &b) {
+	Expand<output,int> op;
+	return op.compute(a, b);
 	dtype = {
 		"double" : "double",
 		"float" : "float"
@@ -332,16 +513,6 @@ tensor<output> global_max_pool(tensor<input> &a) {
   }
 }
 
-tensor<output> greater(tensor<input> &a, tensor<input> &b) {
-  Greater<input> op;
-  return op.compute(a, b);
-  dtype = {
-    "int" : "bool",
-    "float" : "bool",
-    "double" : "bool"
-  }
-}
-
 tensor<output> hardmax(tensor<input> &a, int axis = 0) {
   Hardmax<input> op("localOpName", axis);
   return op.compute(a);
@@ -381,7 +552,7 @@ tensor<output> instancenormalization(tensor<input> &a, tensor<input> &scale,tens
 }
 
 tensor<output> isinf(tensor<input> &a, int detect_positive = 1,int detect_negative = 1) {
-  IsInf<input> op("localOpName", detect_positive, detect_negative);
+  IsInf<output, input> op("localOpName", detect_positive, detect_negative);
   return op.compute(a);
   dtype = {
     "float" : "bool",
@@ -390,7 +561,7 @@ tensor<output> isinf(tensor<input> &a, int detect_positive = 1,int detect_negati
 }
 
 tensor<output> isnan(tensor<input> &a) {
-  IsNaN<input> op;
+  IsNaN<output, input> op;
   return op.compute(a);
   dtype = {
     "float" : "bool",
@@ -424,44 +595,268 @@ tensor<output> reciprocal(tensor<input> &a) {
     "double" : "double"
   }
 }
+
 /* The below operators need to change accroding to above operators */
 
-tensor<float> thresholded_relu(tensor<float> &a) {
-	ThresholdedRelu<float> op;
-	return op.compute(a);
-}
-
-tensor<bool> less(tensor<float> &a, tensor<float> &b) {
-	Less<float> op;
-	return op.compute(a, b);
-}
-
-tensor<float> log(tensor<float> &a) {
-	Log<float> op;
-	return op.compute(a);
-}
-
-tensor<float> logsoftmax(tensor<float> &a) {
-	LogSoftmax<float> op;
-	return op.compute(a);
-}
-
-tensor<float> lpnormalization(tensor<float> &a) {
-	LpNormalization<float> op;
-	return op.compute(a);
-}
-
-tensor<int> matmulinteger(tensor<int> &a, tensor<int> &b) {
-	MatMulInteger<int> op;
-	return op.compute(a, b);
-}
-
-tensor<float> max(std::vector<tensor<float>> a) {
-  Max<float> op;
+tensor<output> log(tensor<input> &a) {
+  Log<input> op;
   return op.compute(a);
+  dtype = {
+    "float" : "float",
+    "double" : "double"
+  }
 }
 
-tensor<float> transpose(tensor<float> &a) {
-	Transpose<float> op;
+tensor<output> logsoftmax(tensor<input> &a, int axis = 1) {
+	LogSoftmax<input> op("localOpName", axis);
 	return op.compute(a);
+	dtype = {
+    "float" : "float",
+    "double" : "double"
+  }
+}
+
+tensor<output> lpnormalization(tensor<input> &a, int p = 2, int axis = -1) {
+  LpNormalization<input> op("localOpName", p, axis);
+  return op.compute(a);
+  dtype = {
+    "float" : "float",
+    "double" : "double"
+  }
+}
+
+tensor<output> matmulinteger(tensor<input> &a, tensor<input> &b, tensor<input> &c, tensor<input> &d) {
+	MatMulInteger<input> op;
+	return op.compute(a, b, c, d);
+  dtype = {
+	"int" : "int"
+  }
+}
+
+tensor<output> min(std::vector<tensor<input>> a) {
+  Min<input> op;
+  return op.compute(a);
+  dtype = {
+    "float" : "float",
+    "double" : "double"
+  }
+}
+
+tensor<output> mean(std::vector<tensor<input>> a) {
+  Mean<input> op;
+  return op.compute(a);
+  dtype = {
+    "float" : "float",
+    "double" : "double"
+  }
+}
+
+tensor<output> max(std::vector<tensor<input>> a) {
+  Max<input> op;
+  return op.compute(a);
+  dtype = {
+    "float" : "float",
+    "double" : "double"
+  }
+}
+
+tensor<output> mod(tensor<input> &a, tensor<input> &b, int fmod_flag = 0) {
+	Mod<input> op("localOpName", fmod_flag);
+	return op.compute(a, b);
+	dtype = {
+		"double" : "double",
+		"float" : "float",
+		"int" : "int"
+	}
+} 
+
+tensor<output> thresholded_relu(tensor<input> &a) {
+  ThresholdedRelu<output> op;
+  return op.compute(a);
+  dtype = {
+    "float" : "float",
+    "double" : "double"
+  }
+}
+
+tensor<output> neg(tensor<input> &a) {
+	Neg<input> op;
+	return op.compute(a);
+	dtype = {
+		"double" : "double",
+		"float" : "float",
+		"int" : "int"
+	}
+}
+
+tensor<output> logical_not(tensor<input> &a) {
+  Not<output, input> op;
+  return op.compute(a);
+  dtype = {
+    "bool" : "bool",
+    "int" : "bool",
+    "float" : "bool",
+    "double" : "bool",
+  }
+}
+
+tensor<output> tan(tensor<input> &a) {
+  Tan<input> op;
+  return op.compute(a);
+  dtype = {
+    "float" : "float",
+    "double" : "double"
+  }
+}
+
+tensor<output> tanh(tensor<input> &a) {
+  Tanh<input> op;
+  return op.compute(a);
+  dtype = {
+    "float" : "float",
+    "double" : "double"
+  }
+}
+
+tensor<output> transpose(tensor<input> &a) {
+	Transpose<input> op;
+	return op.compute(a);
+	dtype = {
+		"double" : "double",
+		"float" : "float",
+		"int" : "int",
+		"bool" : "bool"
+	}
+}
+
+tensor<output> sigmoid(tensor<input> &a) {
+	Sigmoid<input> op;
+	return op.compute(a);
+	dtype = {
+		"float" : "float"
+	}
+}
+
+tensor<output> sign(tensor<input> &a) {
+	Sign<input> op;
+	return op.compute(a);
+	dtype = {
+		"float" : "float",
+		"double" : "double"
+	}
+}
+
+tensor<output> sin(tensor<input> &a) {
+	Sin<input> op;
+	return op.compute(a);
+	dtype = {
+		"float" : "float",
+		"double" : "double"
+	}
+}
+
+tensor<output> sinh(tensor<input> &a) {
+	Sinh<input> op;
+	return op.compute(a);
+	dtype = {
+		"float" : "float",
+		"double" : "double"
+	}
+}
+
+tensor<output> softplus(tensor<input> &a) {
+	Softplus<input> op;
+	return op.compute(a);
+	dtype = {
+		"float" : "float",
+		"double" : "double"
+	}
+}
+
+tensor<output> softmax(tensor<input> &a, int axis = 1) {
+	Softmax<input> op("localOpName", axis);
+	return op.compute(a);
+	dtype = {
+    "float" : "float",
+    "double" : "double"
+  }
+}
+
+tensor<output> softsign(tensor<input> &a) {
+	Softsign<input> op;
+	return op.compute(a);
+	dtype = {
+		"float" : "float",
+		"double" : "double"
+	}
+}
+
+tensor<output> sqrt(tensor<input> &a) {
+	Sqrt<input> op;
+	return op.compute(a);
+	dtype = {
+		"float" : "float",
+		"double" : "double"
+	}
+}
+
+tensor<output> ceil(tensor<input> &a){
+  Ceil<input> op;
+  return op.compute(a);
+  dtype = {
+    "float" : "float",
+    "double" : "double"
+  }
+}
+
+tensor<output> clip(tensor<input> &a, input min, input max){
+  Clip<input> op;
+  return op.compute(a, min, max);
+  dtype = {
+    "float" : "float",
+    "double" : "double"
+  }
+}
+
+tensor<output> cos(tensor<input> &a){
+  Cos<input> op;
+  return op.compute(a);
+  dtype = {
+    "float" : "float",
+    "double" : "double"
+  }
+}
+
+tensor<output> cosh(tensor<input> &a){
+  Cosh<input> op;
+  return op.compute(a);
+  dtype = {
+    "float" : "float",
+    "double" : "double"
+  }
+}
+
+tensor<output> slice(tensor<input> &a, 
+	             tensor<size_t> &start, 
+		     tensor<size_t> &end, 
+		     tensor<int> axes = NULL_TENSOR<int>, 
+		     tensor<size_t> steps = NULL_TENSOR<size_t>) {
+	Slice<input> op;
+	return op.compute(a, start, end, axes, steps);
+	dtype = {
+		"double" : "double",
+		"float" : "float",
+		"int" : "int",
+		"bool" : "bool"
+	}
+} 
+
+tensor<output> prelu(tensor<input> &x, tensor<input> &slope) {
+  PRelu<input> op("localOpName");
+  return op.compute(x, slope);
+  dtype = {
+    "float" : "float",
+    "double" : "double",
+    "int" : "int"
+  }
 }

@@ -22,6 +22,7 @@
 //
 
 #pragma once
+#include "core/broadcast.h"
 #include "operators/baseOperator.h"
 #include <string>
 
@@ -33,32 +34,28 @@ namespace dnnc {
  * elementwise on the input tensors A and B*/
 /*! This operator supports multidirectional (i.e., Numpy-style) broadcasting.*/
 
-template <typename T> class Equal : public baseOperator<T> {
+template <typename To, typename Ti>
+class Equal : public baseOperator<To, Ti, Ti> {
 public:
-  Equal(std::string name = "opEqual") : baseOperator<T>(opEqual, name) {}
+  Equal(std::string name = "opEqual")
+      : baseOperator<To, Ti, Ti>(opEqual, name) {}
 
-  static bool equal_function(T x, T y) { return (x == y) ? true : false; }
-
-  tensor<bool> compute(tensor<T> a /*!< : N D tensor input*/,
-                       tensor<T> b /*!< : N D tensor input*/) {
+  tensor<To> compute(tensor<Ti> a /*!< : N D tensor input*/,
+                     tensor<Ti> b /*!< : N D tensor input*/) {
 
     std::vector<DIMENSION> resultShape = binaryBroadcastReShape(a, b);
-    tensor<bool> result(resultShape);
+    tensor<To> result(resultShape);
 
     if (a.shape() != b.shape())
       throw std::invalid_argument(
           "tensor dimenions not appropriate for Equal operator.");
 
-    a.flatteninplace();
-    b.flatteninplace();
+    DNNC_EIGEN_ARRAY_MAP(eigenVectorA, Ti, a);
+    DNNC_EIGEN_ARRAY_MAP(eigenVectorB, Ti, b);
 
-    DNNC_EIGEN_VECTOR(eigenVectorA, a);
-    DNNC_EIGEN_VECTOR(eigenVectorB, b);
+    DNNC_EIGEN_VECTOR_CTOR(To) eResult;
 
-    DNNC_EIGEN_VECTOR_CTOR(bool) eResult;
-
-    eResult.array() =
-        eigenVectorA.array().binaryExpr(eigenVectorB.array(), &equal_function);
+    eResult.array() = eigenVectorA.array() == eigenVectorB.array();
     result.load(eResult.data());
 
     return result;

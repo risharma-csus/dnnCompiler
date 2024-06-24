@@ -25,49 +25,35 @@
 #include <string>
 
 using namespace Eigen;
-
 namespace dnnc {
-template <typename T> class Softplus : public baseOperator<T> {
+/*! Returns the tensor resulted from performing the sigmoid operation \f$ h(x) =
+ * \log({\mathrm{1} + e^x }) \f$ elementwise on the input tensor A .
+ */
+
+template <typename T> class Softplus : public baseOperator<T, T, T> {
 protected:
 public:
   Softplus(std::string name = "opSoftplus")
-      : baseOperator<T>(opSoftplus, name) {}
+      : baseOperator<T, T, T>(opSoftplus, name) {}
 
-  static bool compare() {
-    return ((typeid(T) == typeid(float)) || (typeid(T) == typeid(double)));
-  }
-
-  static float softplus_func(T x) { return log(1 + exp(x)); }
+  static T softplus_func(T x) { return log(1 + exp(x)); }
 
   // NOT GOOD to return by value
-  tensor<T> compute(tensor<T> &a) {
+  tensor<T> compute(tensor<T> &a /*!< : Input operand([float,double]: ND tensor) for the Softplus operator.*/) {
 
-    if (!compare())
+    if (!(this->template type_check<float, double>(typeid(T))))
       throw std::invalid_argument(
           "Constrain input and output types to float tensors.");
 
-    DNNC_EIGEN_MATRIX(eigenMatrixA, a);
+    tensor<T> result(a.shape(), a.name());
 
-    if (a.rank() == 2) {
-      tensor<T> result(a.shape()[0], a.shape()[1]);
-      Matrix<T, Dynamic, Dynamic> eResult =
-          eigenMatrixA.unaryExpr(&softplus_func);
-      ;
+    DNNC_EIGEN_ARRAY_MAP(eigenVector, T, a);
+    DNNC_EIGEN_VECTOR_CTOR(T) eResult;
 
-      result.load(eResult.data());
+    eResult.array() = eigenVector.array().unaryExpr(&softplus_func);
 
-      return result;
-    } else if (a.rank() == 3) {
-      tensor<T> result(a.shape()[0], a.shape()[1], a.shape()[2]);
-      Matrix<T, Dynamic, Dynamic> eResult =
-          eigenMatrixA.unaryExpr(&softplus_func);
-      ;
-
-      result.load(eResult.data());
-
-      return result;
-    } else
-      throw std::invalid_argument("tensor dimensions not appropriate.");
+    result.load(eResult.data());
+    return result;
   }
 };
 } // namespace dnnc

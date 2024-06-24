@@ -35,7 +35,7 @@ d_1, ... d_n) then
 the output will have shape (d_0 X d_1 ... d_(axis-1), d_axis X d_(axis+1) ... X
 dn)*/
 
-template <typename T> class Flatten : public baseOperator<T> {
+template <typename T> class Flatten : public baseOperator<T, T, T> {
 protected:
   int axis = 1; /*!< Indicate up to which input dimensions (exclusive) should be
     flattened to the outer dimension of the output. The value for axis must be
@@ -44,19 +44,27 @@ protected:
     of the input tensor is (d_0, d_1, ... d_n).*/
 public:
   Flatten(std::string name = "opFlatten", int axis = 1)
-      : baseOperator<T>(opFlatten, name) {
+      : baseOperator<T, T, T>(opFlatten, name) {
     this->axis = axis;
   }
 
-  bool getAttribute(OPATTR attrName, int &obj) {
+  bool getAttribute(OPATTR attrName, int &obj) override {
     if (attrName == attr_axis) {
       obj = axis;
       return true;
     }
     return false;
   }
+  bool setAttribute(OPATTR attrName, int obj) override {
+    if (attrName == attr_axis) {
+      axis = obj;
+      return true;
+    }
+    return false;
+  }
 
   tensor<T> compute(tensor<T> a /*!< : N D tensor input of rank >= axis.*/) {
+
     if (a.rank() < (size_t)axis)
       throw std::invalid_argument(
           "tensor rank or axis not appropriate for Flatten operator.");
@@ -71,8 +79,6 @@ public:
     for (i = axis; i < (size_t)a.rank(); i++) {
       col *= a.shape()[i];
     }
-    // std::cout << a.shape()[0]<< " , " << a.shape()[1] << std::endl;
-    // std::cout << row << " , " << col << std::endl;
 
     std::vector<size_t> two_dimension{row, col};
     a.reshape(two_dimension);

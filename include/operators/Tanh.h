@@ -28,19 +28,31 @@
 using namespace Eigen;
 
 namespace dnnc {
-template <typename T> class Tanh : public baseOperator<T> {
+template <typename T> class Tanh : public baseOperator<T, T, T> {
   //  Tanh attributes
 public:
-  Tanh(std::string name = "opTanh") : baseOperator<T>(opTanh, name) {}
+  Tanh(std::string name = "opTanh") : baseOperator<T, T, T>(opTanh, name) {}
 
   // bool getAttribute<int>(OPATTR attrName, int& obj) ;
 
-  float Tanh_func(T x) { return tanh(x); }
+  // float Tanh_func(T x) { return tanh(x); }
 
   // NOT GOOD to return by value
   tensor<T> compute(tensor<T> &a) {
-    DNNC_EIGEN_MATRIX(eigenMatrixA, a);
-    if (a.rank() == 2) {
+    if (!(this->template type_check<float, double>(typeid(T))))
+      throw std::invalid_argument(
+          "Constrain input and output types to float tensors.");
+
+    tensor<T> result(a.shape(), a.name());
+
+    DNNC_EIGEN_ARRAY_MAP(eigenVector, T, a);
+    DNNC_EIGEN_VECTOR_CTOR(T) eResult;
+
+    eResult.array() = tanh(eigenVector.array());
+
+    result.load(eResult.data());
+    return result;
+    /*if (a.rank() == 2) {
       tensor<T> result(a.shape()[0], a.shape()[1]);
       Matrix<T, Dynamic, Dynamic> eResult = eigenMatrixA.unaryExpr(&Tanh_func);
       result.load(eResult.data());
@@ -50,7 +62,7 @@ public:
       Matrix<T, Dynamic, Dynamic> eResult = eigenMatrixA.unaryExpr(&Tanh_func);
       result.load(eResult.data());
       return result;
-    }
+    }*/
   }
 };
 } // namespace dnnc

@@ -32,18 +32,25 @@ namespace dnnc {
 \alpha x & x<0 \\
 x  & x\geq 0
 \end{matrix}\right.\f$ elementwise */
-template <typename T> class LeakyRelu : public baseOperator<T> {
+template <typename T> class LeakyRelu : public baseOperator<T, T, T> {
 protected:
   float alpha = 0.01;
 
 public:
   LeakyRelu(std::string name = "opLeakyRelu", float alpha = 0.01)
-      : baseOperator<T>(opLeakyRelu, name) {
+      : baseOperator<T, T, T>(opLeakyRelu, name) {
     this->alpha = alpha;
   }
-  bool getAttribute(OPATTR attrName, float &obj) {
+  bool getAttribute(OPATTR attrName, float &obj) override {
     if (attrName == attr_alpha) {
       obj = alpha;
+      return true;
+    }
+    return false;
+  }
+  bool setAttribute(OPATTR attrName, float obj) override {
+    if (attrName == attr_alpha) {
+      alpha = obj;
       return true;
     }
     return false;
@@ -56,11 +63,11 @@ public:
   }
 
   tensor<T> compute(tensor<T> &a /*!<[float,double]: ND tensor*/) {
-    if (!(this->template type_check<float, double>()))
+    if (!(this->template type_check<float, double>(typeid(T))))
       throw std::invalid_argument(
           "Constrain input and output types to float tensors.");
     tensor<T> result(a.shape(), a.name());
-    DNNC_EIGEN_ARRAY_MAP(eigenVector, a);
+    DNNC_EIGEN_ARRAY_MAP(eigenVector, T, a);
     DNNC_EIGEN_VECTOR_CTOR(T) eResult;
     auto c0 = std::bind(Leaky_Relu, std::placeholders::_1, alpha);
     eResult.array() = eigenVector.array().unaryExpr(c0);

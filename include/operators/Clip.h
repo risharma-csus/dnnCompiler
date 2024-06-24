@@ -24,20 +24,37 @@
 #pragma once
 #include "operators/baseOperator.h"
 #include <string>
+#include <typeinfo>
 
 using namespace Eigen;
 
 namespace dnnc {
-template <typename T> class Clip : public baseOperator<T> {
+template <typename T> class Clip : public baseOperator<T, T, T> {
   //  Clip attributes
 public:
-  Clip(std::string name = "opClip") : baseOperator<T>(opClip, name) {}
+  Clip(std::string name = "opClip") : baseOperator<T, T, T>(opClip, name) {}
 
-  // bool getAttribute<int>(OPATTR attrName, int& obj) ;
+  static T clipper(T x, T min, T max) {
+    if (x > max)
+      return max;
+    else if (x < min)
+      return min;
+    else
+      return x;
+  }
 
-  void compute(void) {
-    // CHANGE return-type and args
-    // AND ADD YOUR FUNCTIONAL CODE HERE
+  tensor<T> compute(tensor<T> a, T &min, T &max) {
+    if (!(this->template type_check<float, double>(typeid(T))))
+      throw std::invalid_argument(
+          "Constrain input and output types to float tensors.");
+
+    tensor<T> result(a.shape(), a.name());
+    DNNC_EIGEN_ARRAY_MAP(eigenVector, T, a);
+    DNNC_EIGEN_VECTOR_CTOR(T) eResult;
+    auto c0 = std::bind(clipper, std::placeholders::_1, min, max);
+    eResult.array() = eigenVector.array().unaryExpr(c0);
+    result.load(eResult.data());
+    return result;
   }
 };
 } // namespace dnnc

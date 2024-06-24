@@ -28,16 +28,32 @@
 using namespace Eigen;
 
 namespace dnnc {
-template <typename T> class Not : public baseOperator<T> {
+
+/*! This does element wise binary not operation of given N D tensor.*/
+
+template <typename To, typename Ti>
+class Not : public baseOperator<To, Ti, Ti> {
   //  Not attributes
 public:
-  Not(std::string name = "opNot") : baseOperator<T>(opNot, name) {}
+  Not(std::string name = "opNot") : baseOperator<To, Ti, Ti>(opNot, name) {}
 
-  // bool getAttribute<int>(OPATTR attrName, int& obj) ;
+  tensor<To> compute(tensor<Ti> &a /*!< [bool]: N D tensor input*/) {
 
-  void compute(void) {
-    // CHANGE return-type and args
-    // AND ADD YOUR FUNCTIONAL CODE HERE
+    // This check is for ONNX standard
+    // if (!(this->template type_check<bool>(typeid(Ti))))
+    //   throw std::invalid_argument("Constrain input tensors to bool types.");
+
+    tensor<To> result(a.shape(), a.name());
+
+    DNNC_EIGEN_ARRAY_MAP(eigenVector, Ti, a);
+    DNNC_EIGEN_VECTOR_CTOR(To) eResult;
+    eResult.array() = !eigenVector.template cast<bool>().array();
+    result.load(eResult.data());
+
+    return result;
   }
+  /*!<
+  \return The output tensor of the same shape as input with dtype bool.
+  */
 };
 } // namespace dnnc

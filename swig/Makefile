@@ -38,6 +38,9 @@ $(DNNC_API_CPPS): $(API_MODULES)
 	@echo "generating APIs from $<"
 	$(PYTHON) ./op_gen.py
 
+dnnc.i:tensor.i graph.i
+dnnc_swig.cpp: dnnc.i
+
 SWIG_MODULES=dnnc.i
 SWIG_CPPS=$(SWIG_MODULES:%.i=%_swig.cpp)
 $(SWIG_CPPS):$(SWIG_MODULES) 
@@ -49,11 +52,17 @@ OBJECTS=$(CPP_SRCS:%.cpp=$(OBJ_DIR)/%.o)
 $(OBJ_DIR)/%.o:%.cpp
 	test -d $(OBJ_DIR) || $(MKDIR_P) $(OBJ_DIR) 
 	@echo "compiling $<"
-	$(GCC) $(CPP_FLAGS) $(PY_INCLUDES) $(DNNC_INCLUDES) $(EIGEN_INCLUDES) -c $< -o $@
+	$(CC) $(CPP_FLAGS) $(PY_INCLUDES) $(DNNC_INCLUDES) $(EIGEN_INCLUDES) -c $< -o $@
+
+OTHER_OBJECTS = $(CORE_OBJ)/datatypes.o   \
+				$(OPER_OBJ)/opTypes.o     \
+				$(GRPH_OBJ)/node.o        \
+				$(GRPH_OBJ)/graph.o        \
+				$(CODE_OBJ)/cppCodeGen.o
 
 $(LIB):$(OBJECTS)
 	test -d $(LIB_DIR) || $(MKDIR_P) $(LIB_DIR) 
-	$(GCC) $(LD_FLAGS) $(OBJECTS) -o $@
+	$(CC) $(LD_FLAGS) $(OTHER_OBJECTS) $(OBJECTS) -o $@
 	$(LN_S) -f $@ $(PYMOD)
 
 VERIFY:

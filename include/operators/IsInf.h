@@ -29,7 +29,8 @@ using namespace Eigen;
 
 namespace dnnc {
 /*! Map infinity to true and other values to false.*/
-template <typename T> class IsInf : public baseOperator<T> {
+template <typename To, typename Ti>
+class IsInf : public baseOperator<To, Ti, Ti> {
 protected:
   int detect_negative =
       1; /*!< (Optional) Whether map negative infinity to true. Default to 1 so
@@ -43,11 +44,11 @@ protected:
 public:
   IsInf(std::string name = "opIsInf", int detect_positive = 1,
         int detect_negative = 1)
-      : baseOperator<T>(opIsInf, name) {
+      : baseOperator<To, Ti, Ti>(opIsInf, name) {
     this->detect_positive = detect_positive;
     this->detect_negative = detect_negative;
   }
-  bool getAttribute(OPATTR attrName, int &obj) {
+  bool getAttribute(OPATTR attrName, int &obj) override {
     if (attrName == attr_detect_positive) {
       obj = detect_positive;
       return true;
@@ -57,8 +58,18 @@ public:
     }
     return false;
   }
+  bool setAttribute(OPATTR attrName, int obj) override {
+    if (attrName == attr_detect_positive) {
+      detect_positive = obj;
+      return true;
+    } else if (attrName == attr_detect_negative) {
+      detect_negative = obj;
+      return true;
+    }
+    return false;
+  }
 
-  static bool Is_INF(T x, int detect_negative, int detect_positive) {
+  static bool Is_INF(Ti x, int detect_negative, int detect_positive) {
     if (std::isinf(x)) {
       if ((x < 0) && (detect_negative))
         return true;
@@ -70,8 +81,8 @@ public:
       return false;
   }
   // NOT GOOD to return by value
-  tensor<bool> compute(tensor<T> &a) {
-    if (!(this->template type_check<float, double>()))
+  tensor<To> compute(tensor<Ti> &a) {
+    if (!(this->template type_check<float, double>(typeid(Ti))))
       throw std::invalid_argument(
           "Constrain input and output types to float tensors.");
     tensor<bool> result(a.shape(), a.name());

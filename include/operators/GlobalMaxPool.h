@@ -28,13 +28,17 @@
 using namespace Eigen;
 
 namespace dnnc {
-template <typename T> class GlobalMaxPool : public baseOperator<T> {
+/*! GlobalMaxPool consumes an input tensor X and applies max pooling
+ *across the values in the same channel. This is equivalent to MaxPool with
+ * kernel size equal to the spatial dimension of input tensor. */
+template <typename T> class GlobalMaxPool : public baseOperator<T, T, T> {
 public:
   GlobalMaxPool(std::string name = "opGlobalMaxPool")
-      : baseOperator<T>(opGlobalMaxPool, name) {}
-  tensor<T> compute(tensor<T> a) {
+      : baseOperator<T, T, T>(opGlobalMaxPool, name) {}
+  tensor<T> compute(
+      tensor<T> a /*!< [float,double]: ND tensor of shape ( NxCxD1xD2…Dk ).*/) {
 
-    if (!(this->template type_check<float, double>()))
+    if (!(this->template type_check<float, double>(typeid(T))))
       throw std::invalid_argument(
           "Constrain input and output types to float tensors.");
 
@@ -51,7 +55,7 @@ public:
     shape.pop_back();
     for (int i = 2; i < int(a.rank()); i++)
       shape.push_back(1);
-    DNNC_EIGEN_TENSOR_MAP(eigenTensor, a);
+    DNNC_EIGEN_TENSOR_MAP(eigenTensor, T, a);
     tensor<T> result(shape);
     Tensor<T, 2, RowMajor> eResult(a.shape()[0], a.shape()[1]);
     eResult = eigenTensor.maximum(Eigen::array<int, 1>({2}));

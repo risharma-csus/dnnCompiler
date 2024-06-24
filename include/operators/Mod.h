@@ -22,22 +22,74 @@
 //
 
 #pragma once
+#include "core/broadcast.h"
 #include "operators/baseOperator.h"
+#include <math.h>
 #include <string>
 
 using namespace Eigen;
 
 namespace dnnc {
-template <typename T> class Mod : public baseOperator<T> {
+template <typename T> class Mod : public baseOperator<T, T, T> {
   //  Mod attributes
+protected:
+  int fmod = 0;
+
 public:
-  Mod(std::string name = "opMod") : baseOperator<T>(opMod, name) {}
+  Mod(std::string name = "opMod", int fmod = 0)
+      : baseOperator<T, T, T>(opMod, name) {
+    this->fmod = fmod;
 
-  // bool getAttribute<int>(OPATTR attrName, int& obj) ;
+    // Check for fmod or not
+    if ((fmod == 0) && ((this->template type_check<float, double>(typeid(T)))))
+      throw std::invalid_argument("Set fmod to 1 to pass float values.");
+  }
 
-  void compute(void) {
-    // CHANGE return-type and args
-    // AND ADD YOUR FUNCTIONAL CODE HERE
+  bool getAttribute(OPATTR attrName, int &obj) override {
+    if (attrName == attr_mode) {
+      obj = fmod;
+      return true;
+    }
+    return false;
+  }
+  bool setAttribute(OPATTR attrName, int obj) override {
+    if (attrName == attr_mode) {
+      fmod = obj;
+      return true;
+    }
+    return false;
+  }
+
+  static T mod_function(T x, T y) { return (T)((int)x % (int)y); }
+
+  static T fmod_function(T x, T y) { return ::fmod(x, y); }
+
+  tensor<T> compute(tensor<T> &a /*!< : N D tensor input*/,
+                    tensor<T> &b /*!< : N D tensor input*/) {
+
+    std::vector<DIMENSION> resultShape = binaryBroadcastReShape(a, b);
+    tensor<T> result(resultShape);
+
+    if (a.shape() != b.shape())
+      throw std::invalid_argument(
+          "tensor dimenions not appropriate for Mod operator.");
+
+    DNNC_EIGEN_ARRAY_MAP(eigenVectorA, T, a);
+    DNNC_EIGEN_ARRAY_MAP(eigenVectorB, T, b);
+
+    DNNC_EIGEN_VECTOR_CTOR(T) eigen_result;
+
+    if (fmod) {
+      eigen_result.array() =
+          eigenVectorA.array().binaryExpr(eigenVectorB.array(), &fmod_function);
+    } else {
+      eigen_result.array() =
+          eigenVectorA.array().binaryExpr(eigenVectorB.array(), &mod_function);
+    }
+
+    result.load(eigen_result.data());
+
+    return result;
   }
 };
 } // namespace dnnc

@@ -44,7 +44,7 @@ transA is non-zero, same for B and transB.\n This operator supports
 unidirectional broadcasting (tensor C should be
 unidirectional broadcastable to tensor A * B)*/
 
-template <typename T> class Gemm : public baseOperator<T> {
+template <typename T> class Gemm : public baseOperator<T, T, T> {
 protected:
   float alpha =
       1.0; /*!< Scalar multiplier for the product of input tensors A * B */
@@ -55,18 +55,14 @@ protected:
 public:
   Gemm(std::string name = "opGemm", float alpha = 1.0, float beta = 1.0,
        int transA = 0, int transB = 0)
-      : baseOperator<T>(opGemm, name) {
+      : baseOperator<T, T, T>(opGemm, name) {
     this->alpha = alpha;
     this->beta = beta;
     this->transA = transA;
     this->transB = transB;
   }
-  /*! Compares input datatype with int, double and float*/
-  static bool compare() {
-    return ((typeid(T) == typeid(double)) || (typeid(T) == typeid(float)) ||
-            (typeid(T) == typeid(int)));
-  }
-  bool getAttribute(OPATTR attrName, int &obj) {
+
+  bool getAttribute(OPATTR attrName, int &obj) override {
     if (attrName == attr_transA) {
       obj = transA;
       return true;
@@ -76,12 +72,32 @@ public:
     }
     return false;
   }
-  bool getAttribute(OPATTR attrName, float &obj) {
+  bool getAttribute(OPATTR attrName, float &obj) override {
     if (attrName == attr_alpha) {
       obj = alpha;
       return true;
     } else if (attrName == attr_beta) {
       obj = beta;
+      return true;
+    }
+    return false;
+  }
+  bool setAttribute(OPATTR attrName, int obj) override {
+    if (attrName == attr_transA) {
+      transA = obj;
+      return true;
+    } else if (attrName == attr_transB) {
+      transB = obj;
+      return true;
+    }
+    return false;
+  }
+  bool setAttribute(OPATTR attrName, float obj) override {
+    if (attrName == attr_alpha) {
+      alpha = obj;
+      return true;
+    } else if (attrName == attr_beta) {
+      beta = obj;
       return true;
     }
     return false;
@@ -99,14 +115,15 @@ public:
     if (a.rank() != 2 || b.rank() != 2 || c.rank() != 2)
       throw std::invalid_argument(
           "tensor dimenions not appropriate for Gemm operator.");
-    if (!compare())
+
+    if (!(this->template type_check<float, double, int>(typeid(T))))
       throw std::invalid_argument(
-          "Constrain input and output types to int or float tensors.");
+          "Constrain input and output types to float and int tensors.");
 
     tensor<T> result(c.shape(), c.name());
-    DNNC_EIGEN_MATRIX(eigenMatrixA, a);
-    DNNC_EIGEN_MATRIX(eigenMatrixB, b);
-    DNNC_EIGEN_MATRIX(eigenMatrixC, c);
+    DNNC_EIGEN_MATRIX(eigenMatrixA, T, a);
+    DNNC_EIGEN_MATRIX(eigenMatrixB, T, b);
+    DNNC_EIGEN_MATRIX(eigenMatrixC, T, c);
     Matrix<T, Dynamic, Dynamic, RowMajor> eResult(c.shape()[0], c.shape()[1]);
     // DNNC_EIGEN_VECTOR_CTOR(T) eResult;
 

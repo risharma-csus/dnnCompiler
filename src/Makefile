@@ -25,17 +25,27 @@
 # CORE must be first, all others depend on CORE
 MAKEFLAGS += -j8
 
-all:CORE OPERATORS
+all:CORE OPERATORS GRAPH CODEGEN
 
-CORE:
+FORCE:
+
+CORE: FORCE
 	$(MAKE) -C core
 
 OPERATORS: CORE
 	$(MAKE) -C operators
 
+GRAPH: OPERATORS
+	$(MAKE) -C graph
+
+CODEGEN: GRAPH
+	$(MAKE) -C codegen
+
 clean:
 	$(MAKE) -C core clean
 	$(MAKE) -C operators clean
+	$(MAKE) -C graph clean
+	$(MAKE) -C codegen clean
 
 .PHONY: print_vars
 

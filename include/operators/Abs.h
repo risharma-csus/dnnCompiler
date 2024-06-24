@@ -26,20 +26,22 @@
 #include <string>
 
 using namespace Eigen;
-using namespace std;
 namespace dnnc {
-template <typename T> class Abs : public baseOperator<T> {
+template <typename T> class Abs : public baseOperator<T, T, T> {
 public:
-  Abs(std::string name = "opAbs") : baseOperator<T>(opAbs, name) {}
+  Abs(std::string name = "opAbs") : baseOperator<T, T, T>(opAbs, name) {}
 
   tensor<T> compute(tensor<T> &a) {
 
-    tensor<T> result(a.shape());
+    if (!(this->template type_check<float, double, int>(typeid(T))))
+      throw std::invalid_argument(
+          "Constrain input tensors to numeric tensors.");
 
-    DNNC_EIGEN_MATRIX(eigenMatrixA, a);
+    tensor<T> result(a.shape(), a.name());
 
-    Matrix<T, Dynamic, Dynamic> eResult = eigenMatrixA.cwiseAbs();
-
+    DNNC_EIGEN_ARRAY_MAP(eigenVector, T, a);
+    DNNC_EIGEN_VECTOR_CTOR(T) eResult;
+    eResult.array() = abs(eigenVector.array());
     result.load(eResult.data());
 
     return result;
